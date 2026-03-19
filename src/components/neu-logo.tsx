@@ -7,7 +7,7 @@ export default function NeuLogo(props: HTMLAttributes<HTMLDivElement>) {
     <div {...props} className={cn("relative", props.className)}>
       <Image
         src="https://upload.wikimedia.org/wikipedia/en/c/c4/New_Era_University_logo.png"
-        alt="New Era University Logo"
+        alt="New Era University"
         fill
         sizes="10vw"
         className="object-contain"
