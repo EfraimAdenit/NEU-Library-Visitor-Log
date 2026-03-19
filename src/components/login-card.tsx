@@ -3,37 +3,150 @@
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
 import NeuLogo from './neu-logo';
 import { Loader2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
+import { Input } from './ui/input';
+import { useState } from 'react';
+
+const loginSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email.' }),
+  password: z.string().min(1, { message: 'Password is required.' }),
+});
+
+const signUpSchema = z.object({
+    name: z.string().min(1, { message: 'Name is required.' }),
+    email: z.string().email().refine(email => email.endsWith('@neu.edu.ph'), {
+        message: 'Only @neu.edu.ph emails are allowed.',
+    }),
+    password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+});
+
 
 export default function LoginCard() {
-  const { signInWithGoogle, loading } = useAuth();
+  const { signInWithEmail, signUpWithEmail, loading } = useAuth();
+  const [isLoginView, setIsLoginView] = useState(true);
+
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  const signUpForm = useForm<z.infer<typeof signUpSchema>>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: { name: '', email: '', password: '' },
+  });
+
+  async function handleLogin(values: z.infer<typeof loginSchema>) {
+    await signInWithEmail(values.email, values.password);
+  }
+
+  async function handleSignUp(values: z.infer<typeof signUpSchema>) {
+    await signUpWithEmail(values.name, values.email, values.password);
+  }
+  
+  const isSubmitting = loginForm.formState.isSubmitting || signUpForm.formState.isSubmitting;
 
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="items-center text-center">
         <NeuLogo className="h-16 w-16 text-primary" />
         <CardTitle className="font-headline text-2xl">NEU Library Visitor Log</CardTitle>
-        <CardDescription>Sign in to continue</CardDescription>
+        <CardDescription>{isLoginView ? 'Sign in to continue' : 'Create an account to continue'}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4">
-          <Button variant="default" onClick={signInWithGoogle} disabled={loading}>
-            {loading ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                <path fill="currentColor" d="M488 261.8C488 403.3 381.5 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.5l-62.7 62.7c-27.8-26.4-65.2-42.9-110.2-42.9-84.3 0-152.3 68.2-152.3 152.5s68 152.5 152.3 152.5c98.2 0 130.4-67.4 134.8-103.9H248v-85.3h236.2c2.3 12.7 3.8 25.8 3.8 39.8z"></path>
-              </svg>
-            )}
-            Sign in with Google
-          </Button>
-          <div className="text-center text-xs">
-            <Link href="#" className="underline-offset-4 text-muted-foreground hover:underline" onClick={(e) => e.preventDefault()}>
-              Forgot password?
-            </Link>
-          </div>
+        {isLoginView ? (
+          <Form {...loginForm}>
+            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+              <FormField
+                control={loginForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="name@neu.edu.ph" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={loginForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="********" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
+                {(isSubmitting || loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign In
+              </Button>
+            </form>
+          </Form>
+        ) : (
+          <Form {...signUpForm}>
+            <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
+               <FormField
+                control={signUpForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Juan Dela Cruz" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={signUpForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="name@neu.edu.ph" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={signUpForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="********" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
+                {(isSubmitting || loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign Up
+              </Button>
+            </form>
+          </Form>
+        )}
+        <div className="mt-4 text-center text-sm">
+          {isLoginView ? "Don't have an account? " : "Already have an account? "}
+          <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-primary underline-offset-4 hover:underline">
+            {isLoginView ? 'Sign Up' : 'Sign In'}
+          </button>
         </div>
       </CardContent>
     </Card>
