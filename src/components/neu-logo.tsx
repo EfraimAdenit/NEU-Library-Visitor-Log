@@ -1,26 +1,17 @@
 import { cn } from "@/lib/utils";
-import type { SVGProps } from "react";
+import Image from "next/image";
+import type { HTMLAttributes } from "react";
 
-export default function NeuLogo(props: SVGProps<SVGSVGElement>) {
+export default function NeuLogo(props: HTMLAttributes<HTMLDivElement>) {
   return (
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
-      <path
-        d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z"
-        fill="hsl(var(--primary) / 0.1)"
-        stroke="hsl(var(--primary))"
-        strokeWidth="5"
+    <div {...props} className={cn("relative", props.className)}>
+      <Image
+        src="https://upload.wikimedia.org/wikipedia/en/c/c4/New_Era_University_logo.png"
+        alt="New Era University Logo"
+        fill
+        sizes="10vw"
+        className="object-contain"
       />
-      <text
-        x="50"
-        y="58"
-        textAnchor="middle"
-        fontSize="32"
-        fontWeight="bold"
-        fill="hsl(var(--primary))"
-        className="font-headline"
-      >
-        NEU
-      </text>
-    </svg>
+    </div>
   );
 }
