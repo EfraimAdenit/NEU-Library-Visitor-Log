@@ -19,7 +19,7 @@ interface AuthContextType {
   userData: AppUser | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (name: string, email: string, password: string) => Promise<void>;
+  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUpWithEmail = async (name: string, email: string, password: string) => {
+  const signUpWithEmail = async (fullName: string, email: string, password: string) => {
     setLoading(true);
     try {
       if (!email.endsWith('@neu.edu.ph')) {
@@ -91,13 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       
-      await updateProfile(firebaseUser, { displayName: name });
+      await updateProfile(firebaseUser, { displayName: fullName });
 
       const userRef = doc(db, 'users', firebaseUser.uid);
       const newUserData: AppUser = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
-        name: name,
+        name: fullName,
         role: 'user',
       };
       await setDoc(userRef, newUserData);

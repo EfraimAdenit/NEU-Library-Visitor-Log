@@ -18,7 +18,7 @@ const loginSchema = z.object({
 });
 
 const signUpSchema = z.object({
-    name: z.string().min(1, { message: 'Name is required.' }),
+    fullName: z.string().min(1, { message: 'Name is required.' }),
     email: z.string().email().refine(email => email.endsWith('@neu.edu.ph'), {
         message: 'Only @neu.edu.ph emails are allowed.',
     }),
@@ -37,7 +37,7 @@ export default function LoginCard() {
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { name: '', email: '', password: '' },
+    defaultValues: { fullName: '', email: '', password: '' },
   });
 
   async function handleLogin(values: z.infer<typeof loginSchema>) {
@@ -45,7 +45,7 @@ export default function LoginCard() {
   }
 
   async function handleSignUp(values: z.infer<typeof signUpSchema>) {
-    await signUpWithEmail(values.name, values.email, values.password);
+    await signUpWithEmail(values.fullName, values.email, values.password);
   }
   
   const isSubmitting = loginForm.formState.isSubmitting || signUpForm.formState.isSubmitting;
@@ -98,7 +98,7 @@ export default function LoginCard() {
             <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
                <FormField
                 control={signUpForm.control}
-                name="name"
+                name="fullName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
