@@ -10,7 +10,7 @@ export interface AppUser {
 }
 
 export type VisitReason = 'Research' | 'Study' | 'Borrowing';
-export type College = 'CAS' | 'COE' | 'CBA';
+export type College = 'CAS' | 'COE' | 'CBA' | 'CCS' | 'CIT' | 'COED' | 'CAH';
 export type VisitorType = 'Student' | 'Employee';
 
 export interface Visit {

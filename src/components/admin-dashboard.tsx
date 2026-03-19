@@ -15,7 +15,7 @@ interface AdminDashboardProps {
   initialVisits: Visit[];
 }
 
-const colleges = ['All', 'CAS', 'COE', 'CBA'];
+const colleges = ['All', 'CAS', 'COE', 'CBA', 'CCS', 'CIT', 'COED', 'CAH'];
 const reasons = ['All', 'Research', 'Study', 'Borrowing'];
 
 const AdminDashboard: FC<AdminDashboardProps> = ({ initialVisits }) => {

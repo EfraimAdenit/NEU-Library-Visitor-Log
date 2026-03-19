@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 const formSchema = z.object({
-  college: z.enum(['CAS', 'COE', 'CBA'], { required_error: 'Please select a college.' }),
+  college: z.enum(['CAS', 'COE', 'CBA', 'CCS', 'CIT', 'COED', 'CAH'], { required_error: 'Please select a college.' }),
   reason: z.enum(['Research', 'Study', 'Borrowing'], { required_error: 'Please select a reason.' }),
   visitorType: z.enum(['Student', 'Employee'], { required_error: 'Please select a visitor type.' }),
 });
@@ -75,6 +75,10 @@ export default function VisitLogForm() {
                       <SelectItem value="CAS">College of Arts and Sciences</SelectItem>
                       <SelectItem value="COE">College of Engineering</SelectItem>
                       <SelectItem value="CBA">College of Business and Accountancy</SelectItem>
+                      <SelectItem value="CCS">College of Computer Science</SelectItem>
+                      <SelectItem value="CIT">College of Information Technology</SelectItem>
+                      <SelectItem value="COED">College of Education</SelectItem>
+                      <SelectItem value="CAH">College of Allied Health</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
