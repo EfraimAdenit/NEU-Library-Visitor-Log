@@ -59,7 +59,7 @@ export default function LoginCard() {
       </CardHeader>
       <CardContent>
         {isLoginView ? (
-          <Form {...loginForm}>
+          <Form {...loginForm} key="login-form">
             <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
               <FormField
                 control={loginForm.control}
@@ -94,7 +94,7 @@ export default function LoginCard() {
             </form>
           </Form>
         ) : (
-          <Form {...signUpForm}>
+          <Form {...signUpForm} key="signup-form">
             <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
                <FormField
                 control={signUpForm.control}
