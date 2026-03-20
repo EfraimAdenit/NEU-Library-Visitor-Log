@@ -18,8 +18,8 @@ interface AuthContextType {
   user: User | null;
   userData: AppUser | null;
   loading: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<boolean>;
-  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<boolean>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -42,11 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(firebaseUser);
             setUserData(userSnap.data() as AppUser);
           } else {
+            // This case handles users who signed up but their user document wasn't created,
+            // or for migrating users from other auth systems.
             const newUserData: AppUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
                 name: firebaseUser.displayName,
-                role: 'user',
+                role: 'user', // default role
             };
             await setDoc(userRef, newUserData);
             setUser(firebaseUser);
@@ -66,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setUserData(null);
       } finally {
+        // Only set loading to false on the very first auth check
         if (isInitialLoad.current) {
           setLoading(false);
           isInitialLoad.current = false;
@@ -76,10 +79,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [toast]);
 
-  const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
+  const signInWithEmail = async (email: string, password: string): Promise<void> => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      return true;
     } catch (error: any) {
       console.error(error);
       toast({
@@ -87,11 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Sign in failed",
         description: error.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'An error occurred. Please try again.',
       });
-      return false;
     }
   };
 
-  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<boolean> => {
+  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<void> => {
     try {
       if (!email.endsWith('@neu.edu.ph')) {
         throw { code: 'auth/invalid-email', message: 'Only @neu.edu.ph emails are allowed.' };
@@ -100,8 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       
+      // It's important to update the profile right away
       await updateProfile(firebaseUser, { displayName: fullName });
 
+      // Now create the user document in Firestore
       const userRef = doc(db, 'users', firebaseUser.uid);
       const newUserData: AppUser = {
         uid: firebaseUser.uid,
@@ -110,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: 'user',
       };
       await setDoc(userRef, newUserData);
-      return true;
+
     } catch (error: any) {
         console.error(error);
         toast({
@@ -118,7 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: "Sign up failed",
             description: error.code === 'auth/email-already-in-use' ? 'This email is already registered.' : error.message,
         });
-        return false;
     }
   };
 

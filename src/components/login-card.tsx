@@ -11,7 +11,6 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 import { Input } from './ui/input';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -30,7 +29,6 @@ const signUpSchema = z.object({
 export default function LoginCard() {
   const { signInWithEmail, signUpWithEmail, loading } = useAuth();
   const [isLoginView, setIsLoginView] = useState(true);
-  const router = useRouter();
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -43,17 +41,11 @@ export default function LoginCard() {
   });
 
   async function handleLogin(values: z.infer<typeof loginSchema>) {
-    const success = await signInWithEmail(values.email, values.password);
-    if (success) {
-      router.replace('/dashboard');
-    }
+    await signInWithEmail(values.email, values.password);
   }
 
   async function handleSignUp(values: z.infer<typeof signUpSchema>) {
-    const success = await signUpWithEmail(values.fullName, values.email, values.password);
-    if (success) {
-      router.replace('/dashboard');
-    }
+    await signUpWithEmail(values.fullName, values.email, values.password);
   }
   
   const isSubmitting = loginForm.formState.isSubmitting || signUpForm.formState.isSubmitting;
