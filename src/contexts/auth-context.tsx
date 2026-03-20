@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   userData: AppUser | null;
   loading: boolean;
+  isSubmitting: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (fullName: string, email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   const signInWithEmail = async (email: string, password: string): Promise<void> => {
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
@@ -85,12 +87,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Sign in failed",
         description: error.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'An error occurred. Please try again.',
       });
-      setLoading(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<void> => {
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       if (!email.endsWith('@neu.edu.ph')) {
         throw { code: 'auth/invalid-email', message: 'Only @neu.edu.ph emails are allowed.' };
@@ -117,12 +120,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: "Sign up failed",
             description: error.code === 'auth/email-already-in-use' ? 'This email is already registered.' : error.message,
         });
-        setLoading(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       await firebaseSignOut(auth);
     } catch (error: any) {
@@ -132,7 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Sign out failed",
         description: "An error occurred during sign-out. Please try again.",
       });
-      setLoading(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -140,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     userData,
     loading,
+    isSubmitting,
     signInWithEmail,
     signUpWithEmail,
     signOut,

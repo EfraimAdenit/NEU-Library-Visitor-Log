@@ -27,7 +27,7 @@ const signUpSchema = z.object({
 
 
 export default function LoginCard({ setPersona }: { setPersona: (persona: null) => void }) {
-  const { signInWithEmail, signUpWithEmail, loading } = useAuth();
+  const { signInWithEmail, signUpWithEmail, isSubmitting: authIsSubmitting } = useAuth();
   const [isLoginView, setIsLoginView] = useState(true);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -48,7 +48,8 @@ export default function LoginCard({ setPersona }: { setPersona: (persona: null) 
     await signUpWithEmail(values.fullName, values.email, values.password);
   }
   
-  const isSubmitting = loginForm.formState.isSubmitting || signUpForm.formState.isSubmitting;
+  const formIsSubmitting = loginForm.formState.isSubmitting || signUpForm.formState.isSubmitting;
+  const isSubmitting = formIsSubmitting || authIsSubmitting;
 
   return (
     <Card className="w-full max-w-sm">
@@ -91,8 +92,8 @@ export default function LoginCard({ setPersona }: { setPersona: (persona: null) 
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
-                {(isSubmitting || loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
               </Button>
             </form>
@@ -139,8 +140,8 @@ export default function LoginCard({ setPersona }: { setPersona: (persona: null) 
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
-                {(isSubmitting || loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign Up
               </Button>
             </form>
@@ -148,7 +149,7 @@ export default function LoginCard({ setPersona }: { setPersona: (persona: null) 
         )}
         <div className="mt-4 text-center text-sm">
           {isLoginView ? "Don't have an account? " : "Already have an account? "}
-          <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-primary underline-offset-4 hover:underline">
+          <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-primary underline-offset-4 hover:underline" disabled={authIsSubmitting}>
             {isLoginView ? 'Sign Up' : 'Sign In'}
           </button>
         </div>
