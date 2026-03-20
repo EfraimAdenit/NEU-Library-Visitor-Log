@@ -27,9 +27,8 @@ const signUpSchema = z.object({
 
 
 export default function LoginCard({ setPersona }: { setPersona: (persona: null) => void }) {
-  const { signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInWithEmail, signUpWithEmail, loading } = useAuth();
   const [isLoginView, setIsLoginView] = useState(true);
-  const [loading, setLoading] = useState(false);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -42,15 +41,11 @@ export default function LoginCard({ setPersona }: { setPersona: (persona: null) 
   });
 
   async function handleLogin(values: z.infer<typeof loginSchema>) {
-    setLoading(true);
     await signInWithEmail(values.email, values.password);
-    setLoading(false);
   }
 
   async function handleSignUp(values: z.infer<typeof signUpSchema>) {
-    setLoading(true);
     await signUpWithEmail(values.fullName, values.email, values.password);
-    setLoading(false);
   }
   
   const isSubmitting = loginForm.formState.isSubmitting || signUpForm.formState.isSubmitting;
