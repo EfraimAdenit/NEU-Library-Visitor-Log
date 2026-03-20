@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useEffect, useState, type ReactNode, useRef } from 'react';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword,
@@ -30,17 +30,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userData, setUserData] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
-      if (firebaseUser) {
-        const userRef = doc(db, 'users', firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          setUser(firebaseUser);
-          setUserData(userSnap.data() as AppUser);
-        } else {
+      try {
+        if (firebaseUser) {
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setUser(firebaseUser);
+            setUserData(userSnap.data() as AppUser);
+          } else {
             const newUserData: AppUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
@@ -50,16 +51,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await setDoc(userRef, newUserData);
             setUser(firebaseUser);
             setUserData(newUserData);
+          }
+        } else {
+          setUser(null);
+          setUserData(null);
         }
-      } else {
+      } catch (error) {
+        console.error("Authentication error:", error);
+        toast({
+          variant: "destructive",
+          title: "Authentication Error",
+          description: "There was a problem verifying your session. Please try again.",
+        });
         setUser(null);
         setUserData(null);
+      } finally {
+        if (isInitialLoad.current) {
+          setLoading(false);
+          isInitialLoad.current = false;
+        }
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
