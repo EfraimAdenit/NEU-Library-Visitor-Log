@@ -47,6 +47,15 @@
     --input: 212 53% 30%;
     --ring: 25 100% 50%;
   }
+
+  /* Admin theme overrides */
+  .dark.admin-theme {
+    --primary: 172 79% 52%; /* #25E6C8 Neon Mint */
+    --primary-foreground: 211 65% 11%; /* Deep Ink Blue for text on mint button */
+    --accent: 25 100% 50%; /* #FF6500 Safety Orange */
+    --accent-foreground: 210 40% 98%;
+    --ring: 172 79% 52%; /* Ring color to match primary */
+  }
 }
 
 @layer base {

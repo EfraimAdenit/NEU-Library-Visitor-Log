@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import NeuLogo from './neu-logo';
-import { Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,9 +26,10 @@ const signUpSchema = z.object({
 });
 
 
-export default function LoginCard() {
-  const { signInWithEmail, signUpWithEmail, loading } = useAuth();
+export default function LoginCard({ setPersona }: { setPersona: (persona: null) => void }) {
+  const { signInWithEmail, signUpWithEmail } = useAuth();
   const [isLoginView, setIsLoginView] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -41,18 +42,26 @@ export default function LoginCard() {
   });
 
   async function handleLogin(values: z.infer<typeof loginSchema>) {
+    setLoading(true);
     await signInWithEmail(values.email, values.password);
+    setLoading(false);
   }
 
   async function handleSignUp(values: z.infer<typeof signUpSchema>) {
+    setLoading(true);
     await signUpWithEmail(values.fullName, values.email, values.password);
+    setLoading(false);
   }
   
   const isSubmitting = loginForm.formState.isSubmitting || signUpForm.formState.isSubmitting;
 
   return (
     <Card className="w-full max-w-sm">
-      <CardHeader className="items-center text-center">
+      <CardHeader className="relative items-center text-center">
+        <Button variant="ghost" size="icon" className="absolute left-2 top-2" onClick={() => setPersona(null)}>
+            <ArrowLeft />
+            <span className="sr-only">Back</span>
+        </Button>
         <NeuLogo className="h-16 w-16 text-primary" />
         <CardTitle className="font-headline text-2xl">NEU Library Visitor Log</CardTitle>
         <CardDescription>{isLoginView ? 'Sign in to continue' : 'Create an account to continue'}</CardDescription>
