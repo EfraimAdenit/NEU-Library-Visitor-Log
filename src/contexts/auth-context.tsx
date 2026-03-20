@@ -38,14 +38,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
-          // Refresh user object to get latest profile updates (like displayName)
-          await firebaseUser.reload();
-          const refreshedUser = auth.currentUser;
-          setUser(refreshedUser);
+          // The user document exists, so we can set the user data.
+          // The firebaseUser.reload() call was removed as it was likely causing an infinite loop.
+          setUser(firebaseUser);
           setUserData(userSnap.data() as AppUser);
         } else {
-           // This case can happen if user document creation fails after signup.
-           // Or if user was created via Firebase console directly.
+           // This case can happen if user document creation fails after signup,
+           // or if a user was created via the Firebase console directly.
             const newUserData: AppUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
