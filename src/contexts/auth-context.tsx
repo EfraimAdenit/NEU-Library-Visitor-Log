@@ -18,8 +18,8 @@ interface AuthContextType {
   user: User | null;
   userData: AppUser | null;
   loading: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<boolean>;
+  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<boolean>;
   signOut: () => Promise<void>;
 }
 
@@ -76,9 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [toast]);
 
-  const signInWithEmail = async (email: string, password: string) => {
+  const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      return true;
     } catch (error: any) {
       console.error(error);
       toast({
@@ -86,10 +87,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Sign in failed",
         description: error.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'An error occurred. Please try again.',
       });
+      return false;
     }
   };
 
-  const signUpWithEmail = async (fullName: string, email: string, password: string) => {
+  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<boolean> => {
     try {
       if (!email.endsWith('@neu.edu.ph')) {
         throw { code: 'auth/invalid-email', message: 'Only @neu.edu.ph emails are allowed.' };
@@ -108,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: 'user',
       };
       await setDoc(userRef, newUserData);
-
+      return true;
     } catch (error: any) {
         console.error(error);
         toast({
@@ -116,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: "Sign up failed",
             description: error.code === 'auth/email-already-in-use' ? 'This email is already registered.' : error.message,
         });
+        return false;
     }
   };
 
