@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from './ui/input';
 import { useState } from 'react';
 import { Separator } from './ui/separator';
+import { useRouter } from 'next/navigation';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -41,6 +42,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function LoginCard() {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, sendPasswordReset, isSubmitting } = useAuth();
+  const router = useRouter();
   const [isLoginView, setIsLoginView] = useState(true);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
 
@@ -60,11 +62,27 @@ export default function LoginCard() {
   });
 
   async function handleLogin(values: z.infer<typeof loginSchema>) {
-    await signInWithEmail(values.email, values.password);
+    const appUser = await signInWithEmail(values.email, values.password);
+    if (appUser) {
+      const destination = appUser.role === 'admin' ? '/admin' : '/dashboard';
+      router.push(destination);
+    }
   }
 
   async function handleSignUp(values: z.infer<typeof signUpSchema>) {
-    await signUpWithEmail(values.fullName, values.email, values.password);
+    const appUser = await signUpWithEmail(values.fullName, values.email, values.password);
+    if (appUser) {
+      const destination = appUser.role === 'admin' ? '/admin' : '/dashboard';
+      router.push(destination);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    const appUser = await signInWithGoogle();
+    if (appUser) {
+      const destination = appUser.role === 'admin' ? '/admin' : '/dashboard';
+      router.push(destination);
+    }
   }
 
   async function handlePasswordReset(values: z.infer<typeof passwordResetSchema>) {
@@ -94,7 +112,7 @@ export default function LoginCard() {
                             <FormItem>
                                 <FormLabel>Email</FormLabel>
                                 <FormControl>
-                                <Input placeholder="name@neu.edu.ph" {...field} />
+                                <Input placeholder="name@neu.edu.ph" {...field} autoComplete="email" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -134,7 +152,7 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="name@neu.edu.ph" {...field} />
+                      <Input placeholder="name@neu.edu.ph" {...field} autoComplete="email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -147,7 +165,7 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
+                      <Input type="password" placeholder="********" {...field} autoComplete="current-password" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -169,7 +187,7 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Juan Dela Cruz" {...field} />
+                      <Input placeholder="Juan Dela Cruz" {...field} autoComplete="name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -182,7 +200,7 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="name@neu.edu.ph" {...field} />
+                      <Input placeholder="name@neu.edu.ph" {...field} autoComplete="email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -195,7 +213,7 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="********" {...field} />
+                      <Input type="password" placeholder="********" {...field} autoComplete="new-password"/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -219,7 +237,7 @@ export default function LoginCard() {
             <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">OR</span>
         </div>
 
-        <Button variant="outline" className="w-full" onClick={() => signInWithGoogle()} disabled={submitting}>
+        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={submitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon className="mr-2 h-4 w-4"/>}
             Sign In with Google
         </Button>

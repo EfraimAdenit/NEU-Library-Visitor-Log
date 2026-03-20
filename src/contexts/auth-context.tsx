@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useEffect, useState, type ReactNode, useCallback } from 'react';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword,
@@ -22,9 +22,9 @@ interface AuthContextType {
   userData: AppUser | null;
   loading: boolean;
   isSubmitting: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<AppUser | null>;
+  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<AppUser | null>;
+  signInWithGoogle: () => Promise<AppUser | null>;
   sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -38,25 +38,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleUserAuth = async (firebaseUser: User) => {
+  const handleUserAuth = useCallback(async (firebaseUser: User): Promise<AppUser | null> => {
     const userRef = doc(db, 'users', firebaseUser.uid);
     const userSnap = await getDoc(userRef);
+    let appUserData: AppUser;
+
     if (userSnap.exists()) {
-        setUser(firebaseUser);
-        setUserData(userSnap.data() as AppUser);
+        appUserData = userSnap.data() as AppUser;
     } else {
         const role = firebaseUser.email === 'jcesperanza@neu.edu.ph' ? 'admin' : 'user';
-        const newUserData: AppUser = {
+        appUserData = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: firebaseUser.displayName,
             role,
         };
-        await setDoc(userRef, newUserData);
-        setUser(firebaseUser);
-        setUserData(newUserData);
+        await setDoc(userRef, appUserData);
     }
-  }
+    setUser(firebaseUser);
+    setUserData(appUserData);
+    return appUserData;
+  }, [toast]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -82,27 +84,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast]);
+  }, [handleUserAuth, toast]);
 
-  const signInWithEmail = async (email: string, password: string): Promise<void> => {
+  const signInWithEmail = async (email: string, password: string): Promise<AppUser | null> => {
     setIsSubmitting(true);
+    let appUser: AppUser | null = null;
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      appUser = await handleUserAuth(userCredential.user);
+      if (appUser) {
+        toast({
+            title: "Welcome Back!",
+            description: "You have been successfully signed in.",
+            variant: "default",
+            className: "bg-accent text-accent-foreground border-accent",
+        });
+      }
     } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
-        title: "Sign in failed",
+        title: "Login Failed",
         description: error.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'An error occurred. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
     }
+    return appUser;
   };
 
-  const signInWithGoogle = async (): Promise<void> => {
+  const signInWithGoogle = async (): Promise<AppUser | null> => {
     setIsSubmitting(true);
+    let appUser: AppUser | null = null;
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -112,26 +125,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await firebaseSignOut(auth);
           toast({
               variant: "destructive",
-              title: "Sign in failed",
+              title: "Login Failed",
               description: "Only @neu.edu.ph accounts are permitted.",
           });
-          return;
+      } else {
+        appUser = await handleUserAuth(googleUser);
+        if (appUser) {
+           toast({
+                title: 'Welcome!',
+                description: 'You have been successfully signed in with Google.',
+                variant: 'default',
+                className: 'bg-accent text-accent-foreground border-accent',
+            });
+        }
       }
-      // handleUserAuth will be triggered by onAuthStateChanged
     } catch (error: any) {
         console.error(error);
         toast({
             variant: "destructive",
-            title: "Sign in with Google failed",
-            description: "An error occurred. Please try again.",
+            title: "Login Failed",
+            description: "An error occurred during Google sign-in. Please try again.",
         });
     } finally {
         setIsSubmitting(false);
     }
+    return appUser;
   }
 
-  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<void> => {
+  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<AppUser | null> => {
     setIsSubmitting(true);
+    let appUser: AppUser | null = null;
     try {
       if (!email.endsWith('@neu.edu.ph')) {
         throw { code: 'auth/invalid-email', message: 'Only @neu.edu.ph emails are allowed.' };
@@ -141,27 +164,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const firebaseUser = userCredential.user;
       
       await updateProfile(firebaseUser, { displayName: fullName });
-      
-      const role = firebaseUser.email === 'jcesperanza@neu.edu.ph' ? 'admin' : 'user';
-      const userRef = doc(db, 'users', firebaseUser.uid);
-      const newUserData: AppUser = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        name: fullName,
-        role,
-      };
-      await setDoc(userRef, newUserData);
+      appUser = await handleUserAuth(firebaseUser);
 
+      if(appUser) {
+        toast({
+            title: 'Account Created!',
+            description: 'Welcome! You have been successfully signed up.',
+            variant: 'default',
+            className: 'bg-accent text-accent-foreground border-accent',
+        });
+      }
     } catch (error: any) {
         console.error(error);
         toast({
             variant: "destructive",
-            title: "Sign up failed",
+            title: "Sign Up Failed",
             description: error.code === 'auth/email-already-in-use' ? 'This email is already registered.' : error.message,
         });
     } finally {
       setIsSubmitting(false);
     }
+    return appUser;
   };
 
   const sendPasswordReset = async (email: string) => {
@@ -188,6 +211,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsSubmitting(true);
     try {
       await firebaseSignOut(auth);
+       toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out.",
+      });
     } catch (error: any) {
        console.error(error);
        toast({
