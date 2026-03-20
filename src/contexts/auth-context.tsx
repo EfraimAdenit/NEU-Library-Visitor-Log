@@ -38,18 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userRef = doc(db, 'users', firebaseUser.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
-          // The user document exists, so we can set the user data.
-          // The firebaseUser.reload() call was removed as it was likely causing an infinite loop.
           setUser(firebaseUser);
           setUserData(userSnap.data() as AppUser);
         } else {
-           // This case can happen if user document creation fails after signup,
-           // or if a user was created via the Firebase console directly.
             const newUserData: AppUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
                 name: firebaseUser.displayName,
-                role: 'user', // Default role
+                role: 'user',
             };
             await setDoc(userRef, newUserData);
             setUser(firebaseUser);
@@ -66,7 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithEmail = async (email: string, password: string) => {
-    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
@@ -76,12 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Sign in failed",
         description: error.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'An error occurred. Please try again.',
       });
-      setLoading(false);
     }
   };
 
   const signUpWithEmail = async (fullName: string, email: string, password: string) => {
-    setLoading(true);
     try {
       if (!email.endsWith('@neu.edu.ph')) {
         throw { code: 'auth/invalid-email', message: 'Only @neu.edu.ph emails are allowed.' };
@@ -108,12 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: "Sign up failed",
             description: error.code === 'auth/email-already-in-use' ? 'This email is already registered.' : error.message,
         });
-        setLoading(false);
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
     try {
       await firebaseSignOut(auth);
     } catch (error: any) {
@@ -123,7 +114,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Sign out failed",
         description: "An error occurred during sign-out. Please try again.",
       });
-       setLoading(false);
     }
   };
 
