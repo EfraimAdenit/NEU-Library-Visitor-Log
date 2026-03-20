@@ -10,7 +10,8 @@ import {
   signOut as firebaseSignOut, 
   type User,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -71,6 +72,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Check for redirect result from Google sign-in first
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          const googleUser = result.user;
+          if (!googleUser.email?.endsWith('@neu.edu.ph')) {
+            firebaseSignOut(auth); // Sign out the user immediately
+            toast({
+              variant: 'destructive',
+              title: 'Login Failed',
+              description: 'Only @neu.edu.ph accounts are permitted.',
+            });
+          } else {
+            // The onAuthStateChanged listener below will handle creating the user
+            // and setting the state. We can just show a success toast here.
+            toast({
+              title: 'Welcome!',
+              description: 'You have been successfully signed in with Google.',
+              variant: 'default',
+              className: 'bg-accent text-accent-foreground border-accent',
+            });
+          }
+        }
+      })
+      .catch((error) => {
+        console.error("Google Sign-In Redirect Failed:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: 'An error occurred during Google sign-in. Please try again.',
+        });
+      });
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
@@ -125,37 +159,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async (): Promise<void> => {
     setIsSubmitting(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const googleUser = result.user;
-
-      if (!googleUser.email?.endsWith('@neu.edu.ph')) {
-          await firebaseSignOut(auth); // Sign out the user immediately
-          toast({
-              variant: "destructive",
-              title: "Login Failed",
-              description: "Only @neu.edu.ph accounts are permitted.",
-          });
-      } else {
-        await handleUserAuth(googleUser);
-        toast({
-            title: 'Welcome!',
-            description: 'You have been successfully signed in with Google.',
-            variant: 'default',
-            className: 'bg-accent text-accent-foreground border-accent',
-        });
-      }
-    } catch (error: any) {
-        console.error("Google Sign-In Failed:", error);
-        toast({
-            variant: "destructive",
-            title: "Login Failed",
-            description: "An error occurred during Google sign-in. Please try again.",
-        });
-    } finally {
-        setIsSubmitting(false);
-    }
+    const provider = new GoogleAuthProvider();
+    // Errors will be caught by getRedirectResult on the landing page.
+    await signInWithRedirect(auth, provider);
   }
 
   const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<void> => {

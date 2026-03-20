@@ -66,6 +66,11 @@ const AdminDashboard = () => {
 
     const unsubscribe = onSnapshot(q,
       (snapshot) => {
+        // Wait for live server response before rendering to avoid flashes of old data.
+        if (snapshot.metadata.fromCache) {
+          return;
+        }
+
         const fetchedVisits = snapshot.docs.map(doc => {
           const data = doc.data();
           return {
