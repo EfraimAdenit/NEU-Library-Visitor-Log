@@ -7,7 +7,10 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   signOut as firebaseSignOut, 
-  type User 
+  type User,
+  GoogleAuthProvider,
+  signInWithPopup,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
@@ -21,6 +24,8 @@ interface AuthContextType {
   isSubmitting: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (fullName: string, email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -33,28 +38,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  const handleUserAuth = async (firebaseUser: User) => {
+    const userRef = doc(db, 'users', firebaseUser.uid);
+    const userSnap = await getDoc(userRef);
+    if (userSnap.exists()) {
+        setUser(firebaseUser);
+        setUserData(userSnap.data() as AppUser);
+    } else {
+        const role = firebaseUser.email === 'jcesperanza@neu.edu.ph' ? 'admin' : 'user';
+        const newUserData: AppUser = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: firebaseUser.displayName,
+            role,
+        };
+        await setDoc(userRef, newUserData);
+        setUser(firebaseUser);
+        setUserData(newUserData);
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
         if (firebaseUser) {
-          const userRef = doc(db, 'users', firebaseUser.uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            setUser(firebaseUser);
-            setUserData(userSnap.data() as AppUser);
-          } else {
-            // This case handles users who signed up but their user document wasn't created,
-            // or for migrating users from other auth systems.
-            const newUserData: AppUser = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                name: firebaseUser.displayName,
-                role: 'user', // default role
-            };
-            await setDoc(userRef, newUserData);
-            setUser(firebaseUser);
-            setUserData(newUserData);
-          }
+          await handleUserAuth(firebaseUser);
         } else {
           setUser(null);
           setUserData(null);
@@ -74,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   const signInWithEmail = async (email: string, password: string): Promise<void> => {
@@ -92,6 +101,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async (): Promise<void> => {
+    setIsSubmitting(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const googleUser = result.user;
+
+      if (!googleUser.email?.endsWith('@neu.edu.ph')) {
+          await firebaseSignOut(auth);
+          toast({
+              variant: "destructive",
+              title: "Sign in failed",
+              description: "Only @neu.edu.ph accounts are permitted.",
+          });
+          return;
+      }
+      // handleUserAuth will be triggered by onAuthStateChanged
+    } catch (error: any) {
+        console.error(error);
+        toast({
+            variant: "destructive",
+            title: "Sign in with Google failed",
+            description: "An error occurred. Please try again.",
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
   const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<void> => {
     setIsSubmitting(true);
     try {
@@ -103,13 +141,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const firebaseUser = userCredential.user;
       
       await updateProfile(firebaseUser, { displayName: fullName });
-
+      
+      const role = firebaseUser.email === 'jcesperanza@neu.edu.ph' ? 'admin' : 'user';
       const userRef = doc(db, 'users', firebaseUser.uid);
       const newUserData: AppUser = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         name: fullName,
-        role: 'user',
+        role,
       };
       await setDoc(userRef, newUserData);
 
@@ -124,6 +163,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsSubmitting(false);
     }
   };
+
+  const sendPasswordReset = async (email: string) => {
+    setIsSubmitting(true);
+    try {
+        await sendPasswordResetEmail(auth, email);
+        toast({
+            title: "Password Reset Email Sent",
+            description: `A reset link has been sent to ${email}.`,
+        });
+    } catch (error: any) {
+         toast({
+            variant: "destructive",
+            title: "Failed to Send Reset Email",
+            description: "Please check the email address and try again.",
+        });
+        console.error(error);
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
 
   const signOut = async () => {
     setIsSubmitting(true);
@@ -148,6 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isSubmitting,
     signInWithEmail,
     signUpWithEmail,
+    signInWithGoogle,
+    sendPasswordReset,
     signOut,
   };
 
