@@ -16,11 +16,17 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
     }
   }, [user, loading, router]);
   
-  // Specific admin route protection
+  // Role-based route protection and redirection
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.pathname === '/admin') {
-      if (!loading && userData && userData.role !== 'admin') {
+    if (!loading && userData && typeof window !== 'undefined') {
+      const { pathname } = window.location;
+      // If a non-admin tries to access /admin, redirect to /dashboard
+      if (pathname.startsWith('/admin') && userData.role !== 'admin') {
         router.replace('/dashboard');
+      }
+      // If an admin is on /dashboard, redirect them to /admin
+      if (pathname.startsWith('/dashboard') && userData.role === 'admin') {
+        router.replace('/admin');
       }
     }
   }, [userData, loading, router]);
@@ -34,7 +40,7 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
     );
   }
   
-  if (typeof window !== 'undefined' && window.location.pathname === '/admin' && (!userData || userData.role !== 'admin')) {
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin') && (!userData || userData.role !== 'admin')) {
      return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

@@ -7,14 +7,18 @@ import LoginCard from '@/components/login-card';
 import { Loader2 } from 'lucide-react';
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
-      router.replace('/dashboard');
+    if (!loading && user && userData) {
+      if (userData.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/dashboard');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, userData, loading, router]);
 
   if (loading || user) {
     return (
