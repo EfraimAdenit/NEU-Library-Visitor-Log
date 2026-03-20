@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -144,7 +145,7 @@ export default function LoginCard() {
       <CardContent>
         {isLoginView ? (
           <Form {...loginForm}>
-            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+            <form key="login-form" onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
               <FormField
                 control={loginForm.control}
                 name="email"
@@ -179,7 +180,7 @@ export default function LoginCard() {
           </Form>
         ) : (
           <Form {...signUpForm}>
-            <form onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
+            <form key="signup-form" onSubmit={signUpForm.handleSubmit(handleSignUp)} className="space-y-4">
                <FormField
                 control={signUpForm.control}
                 name="fullName"
@@ -252,3 +253,5 @@ export default function LoginCard() {
     </Card>
   );
 }
+
+    
