@@ -63,27 +63,15 @@ export default function LoginCard() {
   });
 
   async function handleLogin(values: z.infer<typeof loginSchema>) {
-    const appUser = await signInWithEmail(values.email, values.password);
-    if (appUser) {
-      const destination = appUser.role === 'admin' ? '/admin' : '/dashboard';
-      router.push(destination);
-    }
+    await signInWithEmail(values.email, values.password);
   }
 
   async function handleSignUp(values: z.infer<typeof signUpSchema>) {
-    const appUser = await signUpWithEmail(values.fullName, values.email, values.password);
-    if (appUser) {
-      const destination = appUser.role === 'admin' ? '/admin' : '/dashboard';
-      router.push(destination);
-    }
+    await signUpWithEmail(values.fullName, values.email, values.password);
   }
 
   async function handleGoogleSignIn() {
-    const appUser = await signInWithGoogle();
-    if (appUser) {
-      const destination = appUser.role === 'admin' ? '/admin' : '/dashboard';
-      router.push(destination);
-    }
+    await signInWithGoogle();
   }
 
   async function handlePasswordReset(values: z.infer<typeof passwordResetSchema>) {
@@ -245,7 +233,7 @@ export default function LoginCard() {
         
         <div className="mt-4 text-center text-sm">
           {isLoginView ? "Don't have an account? " : "Already have an account? "}
-          <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-primary underline-offset-4 hover:underline" disabled={isSubmitting}>
+          <button onClick={() => setIsLoginView(!isLoginView)} className="font-semibold text-primary underline-offset-4 hover:underline" disabled={submitting}>
             {isLoginView ? 'Sign Up' : 'Sign In'}
           </button>
         </div>
@@ -253,5 +241,3 @@ export default function LoginCard() {
     </Card>
   );
 }
-
-    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useEffect, useState, type ReactNode, useCallback } from 'react';
@@ -22,9 +23,9 @@ interface AuthContextType {
   userData: AppUser | null;
   loading: boolean;
   isSubmitting: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<AppUser | null>;
-  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<AppUser | null>;
-  signInWithGoogle: () => Promise<AppUser | null>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -38,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleUserAuth = useCallback(async (firebaseUser: User): Promise<AppUser | null> => {
+  const handleUserAuth = useCallback(async (firebaseUser: User): Promise<AppUser> => {
     const userRef = doc(db, 'users', firebaseUser.uid);
     const userSnap = await getDoc(userRef);
     let appUserData: AppUser;
@@ -46,19 +47,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userSnap.exists()) {
         appUserData = userSnap.data() as AppUser;
     } else {
-        const role = firebaseUser.email === 'jcesperanza@neu.edu.ph' ? 'admin' : 'user';
+        // This logic runs for new users (both email and Google sign-up)
+        const displayName = firebaseUser.displayName || '';
+        const email = firebaseUser.email;
+        // Assign admin role based on email
+        const role = email === 'jcesperanza@neu.edu.ph' ? 'admin' : 'user';
+        
         appUserData = {
             uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            name: firebaseUser.displayName,
+            email: email,
+            name: displayName,
             role,
         };
+        // Update user profile if display name was missing (e.g., email sign-up)
+        if (!firebaseUser.displayName && displayName) {
+          await updateProfile(firebaseUser, { displayName });
+        }
         await setDoc(userRef, appUserData);
     }
     setUser(firebaseUser);
     setUserData(appUserData);
     return appUserData;
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -86,61 +96,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [handleUserAuth, toast]);
 
-  const signInWithEmail = async (email: string, password: string): Promise<AppUser | null> => {
+  const signInWithEmail = async (email: string, password: string): Promise<void> => {
     setIsSubmitting(true);
-    let appUser: AppUser | null = null;
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      appUser = await handleUserAuth(userCredential.user);
-      if (appUser) {
-        toast({
-            title: "Welcome Back!",
-            description: "You have been successfully signed in.",
-            variant: "default",
-            className: "bg-accent text-accent-foreground border-accent",
-        });
-      }
+      await handleUserAuth(userCredential.user);
+      toast({
+          title: "Welcome Back!",
+          description: "You have been successfully signed in.",
+          variant: "default",
+          className: "bg-accent text-accent-foreground border-accent",
+      });
     } catch (error: any) {
-      console.error(error);
+      console.error("Login Failed:", error);
+      let description = 'An unknown error occurred. Please try again.';
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        description = 'Invalid email or password. Please check your credentials and try again.';
+      }
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: error.code === 'auth/invalid-credential' ? 'Invalid email or password.' : 'An error occurred. Please try again.',
+        description: description,
       });
     } finally {
       setIsSubmitting(false);
     }
-    return appUser;
   };
 
-  const signInWithGoogle = async (): Promise<AppUser | null> => {
+  const signInWithGoogle = async (): Promise<void> => {
     setIsSubmitting(true);
-    let appUser: AppUser | null = null;
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const googleUser = result.user;
 
       if (!googleUser.email?.endsWith('@neu.edu.ph')) {
-          await firebaseSignOut(auth);
+          await firebaseSignOut(auth); // Sign out the user immediately
           toast({
               variant: "destructive",
               title: "Login Failed",
               description: "Only @neu.edu.ph accounts are permitted.",
           });
       } else {
-        appUser = await handleUserAuth(googleUser);
-        if (appUser) {
-           toast({
-                title: 'Welcome!',
-                description: 'You have been successfully signed in with Google.',
-                variant: 'default',
-                className: 'bg-accent text-accent-foreground border-accent',
-            });
-        }
+        await handleUserAuth(googleUser);
+        toast({
+            title: 'Welcome!',
+            description: 'You have been successfully signed in with Google.',
+            variant: 'default',
+            className: 'bg-accent text-accent-foreground border-accent',
+        });
       }
     } catch (error: any) {
-        console.error(error);
+        console.error("Google Sign-In Failed:", error);
         toast({
             variant: "destructive",
             title: "Login Failed",
@@ -149,42 +156,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
         setIsSubmitting(false);
     }
-    return appUser;
   }
 
-  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<AppUser | null> => {
+  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<void> => {
     setIsSubmitting(true);
-    let appUser: AppUser | null = null;
     try {
       if (!email.endsWith('@neu.edu.ph')) {
+        // This custom error will be caught by the catch block
         throw { code: 'auth/invalid-email', message: 'Only @neu.edu.ph emails are allowed.' };
       }
         
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
-      
-      await updateProfile(firebaseUser, { displayName: fullName });
-      appUser = await handleUserAuth(firebaseUser);
+      // Manually update profile before calling handleUserAuth
+      await updateProfile(userCredential.user, { displayName: fullName });
+      // handleUserAuth will now read the updated profile
+      await handleUserAuth(userCredential.user);
 
-      if(appUser) {
-        toast({
-            title: 'Account Created!',
-            description: 'Welcome! You have been successfully signed up.',
-            variant: 'default',
-            className: 'bg-accent text-accent-foreground border-accent',
-        });
-      }
+      toast({
+          title: 'Account Created!',
+          description: 'Welcome! You have been successfully signed up.',
+          variant: 'default',
+          className: 'bg-accent text-accent-foreground border-accent',
+      });
     } catch (error: any) {
-        console.error(error);
+        console.error("Sign Up Failed:", error);
+        let description = error.message; // Default to firebase message
+        if (error.code === 'auth/email-already-in-use') {
+            description = 'An account with this email address already exists. Please sign in instead.';
+        } else if (error.code === 'auth/weak-password') {
+            description = 'The password is too weak. Please use at least 6 characters.';
+        }
         toast({
             variant: "destructive",
             title: "Sign Up Failed",
-            description: error.code === 'auth/email-already-in-use' ? 'This email is already registered.' : error.message,
+            description: description,
         });
     } finally {
       setIsSubmitting(false);
     }
-    return appUser;
   };
 
   const sendPasswordReset = async (email: string) => {
@@ -193,15 +202,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await sendPasswordResetEmail(auth, email);
         toast({
             title: "Password Reset Email Sent",
-            description: `A reset link has been sent to ${email}.`,
+            description: `A reset link has been sent to ${email}. Check your inbox.`,
+            variant: 'default',
+            className: 'bg-accent text-accent-foreground border-accent',
         });
     } catch (error: any) {
+         console.error("Password Reset Failed:", error);
          toast({
             variant: "destructive",
             title: "Failed to Send Reset Email",
-            description: "Please check the email address and try again.",
+            description: "Could not send reset email. Please check the address and try again.",
         });
-        console.error(error);
     } finally {
         setIsSubmitting(false);
     }
@@ -216,7 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have been successfully signed out.",
       });
     } catch (error: any) {
-       console.error(error);
+       console.error("Sign Out Failed:", error);
        toast({
         variant: "destructive",
         title: "Sign out failed",
