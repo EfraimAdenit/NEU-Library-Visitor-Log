@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: 'https://neubetalibrary-477a6.firebaseapp.com/__/auth/:path*',
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

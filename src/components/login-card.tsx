@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useTheme } from '@/components/theme-provider';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +43,7 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function LoginCard() {
+  const { roleTheme, setRoleTheme } = useTheme();
   const { signInWithEmail, signUpWithEmail, signInWithGoogle, sendPasswordReset, isSubmitting } = useAuth();
   const router = useRouter();
   const [isLoginView, setIsLoginView] = useState(true);
@@ -63,11 +65,17 @@ export default function LoginCard() {
   });
 
   async function handleLogin(values: z.infer<typeof loginSchema>) {
-    await signInWithEmail(values.email, values.password);
+    const success = await signInWithEmail(values.email, values.password);
+    if (success && (values.email === 'jcesperanza@neu.edu.ph' || values.email?.toLowerCase() === 'efraim.adenit@neu.edu.ph')) {
+        router.push('/admin');
+    }
   }
 
   async function handleSignUp(values: z.infer<typeof signUpSchema>) {
-    await signUpWithEmail(values.fullName, values.email, values.password);
+    const success = await signUpWithEmail(values.fullName, values.email, values.password);
+    if (success && (values.email === 'jcesperanza@neu.edu.ph' || values.email?.toLowerCase() === 'efraim.adenit@neu.edu.ph')) {
+        router.push('/admin');
+    }
   }
 
   async function handleGoogleSignIn() {
@@ -85,8 +93,11 @@ export default function LoginCard() {
 
   if (showPasswordReset) {
       return (
-        <Card className="w-full max-w-sm">
-            <CardHeader className="items-center text-center">
+        <Card className="w-full max-w-sm border-white/10 bg-card/60 backdrop-blur-xl shadow-2xl shadow-primary/10 animate-in fade-in zoom-in-95 slide-in-from-bottom-8 duration-700">
+            <CardHeader className="items-center text-center relative">
+                <button onClick={() => setShowPasswordReset(false)} className="absolute left-6 top-6 text-sm text-muted-foreground hover:text-foreground">
+                    &larr; Back
+                </button>
                 <NeuLogo className="h-16 w-16 text-primary" />
                 <CardTitle className="font-headline text-2xl">Reset Password</CardTitle>
                 <CardDescription>Enter your email to receive a reset link</CardDescription>
@@ -107,25 +118,43 @@ export default function LoginCard() {
                             </FormItem>
                             )}
                         />
-                        <Button type="submit" className="w-full" disabled={submitting}>
+                        <Button type="submit" className="w-full transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg" disabled={submitting}>
                             {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Send Reset Link
                         </Button>
                     </form>
                 </Form>
-                 <div className="mt-4 text-center text-sm">
-                    <button onClick={() => setShowPasswordReset(false)} className="font-semibold text-primary underline-offset-4 hover:underline" disabled={submitting}>
-                        Back to Sign In
-                    </button>
-                </div>
             </CardContent>
         </Card>
       )
   }
 
+  if (!roleTheme) {
+    return (
+      <Card className="w-full max-w-sm border-white/10 bg-card/60 backdrop-blur-xl shadow-2xl shadow-primary/10 animate-in fade-in zoom-in-95 slide-in-from-bottom-8 duration-700">
+        <CardHeader className="items-center text-center">
+          <NeuLogo className="h-16 w-16 text-primary" />
+          <CardTitle className="font-headline text-2xl mt-4">Welcome</CardTitle>
+          <CardDescription>Please select your account type</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button className="w-full h-14 text-md transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-primary/20 active:scale-95" variant="default" onClick={() => setRoleTheme('student')}>
+            Student / User
+          </Button>
+          <Button className="w-full h-14 text-md bg-[#25E6C8] text-[#0B192C] shadow-[0_0_15px_rgba(37,230,200,0.15)] transition-all duration-300 hover:bg-[#25E6C8]/90 hover:scale-[1.03] hover:shadow-[0_0_25px_rgba(37,230,200,0.4)] active:scale-95" onClick={() => setRoleTheme('admin')}>
+            Library Admin
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm relative border-white/10 bg-card/60 backdrop-blur-xl shadow-2xl shadow-primary/10 animate-in fade-in zoom-in-95 slide-in-from-bottom-8 duration-700">
       <CardHeader className="items-center text-center">
+        <button onClick={() => setRoleTheme(null)} className="absolute left-6 top-6 text-sm text-muted-foreground hover:text-foreground">
+          &larr; Back
+        </button>
         <NeuLogo className="h-16 w-16 text-primary" />
         <CardTitle className="font-headline text-2xl">NEU Library Visitor Log</CardTitle>
         <CardDescription>{isLoginView ? 'Sign in to your account' : 'Create an account'}</CardDescription>
@@ -141,7 +170,7 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="name@neu.edu.ph" {...field} autoComplete="email" />
+                      <Input id="login-email" placeholder="name@neu.edu.ph" {...field} autoComplete="email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -154,13 +183,13 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="********" {...field} autoComplete="current-password" />
+                      <Input id="login-password" type="password" placeholder="********" {...field} autoComplete="current-password" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button type="submit" className="w-full transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg" disabled={submitting}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
               </Button>
@@ -176,7 +205,7 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Juan Dela Cruz" {...field} autoComplete="name" />
+                      <Input id="signup-fullname" placeholder="Juan Dela Cruz" {...field} autoComplete="name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -189,7 +218,7 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="name@neu.edu.ph" {...field} autoComplete="email" />
+                      <Input id="signup-email" placeholder="name@neu.edu.ph" {...field} autoComplete="email" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -202,13 +231,13 @@ export default function LoginCard() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="********" {...field} autoComplete="new-password"/>
+                      <Input id="signup-password" type="password" placeholder="********" {...field} autoComplete="new-password"/>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={submitting}>
+              <Button type="submit" className="w-full transition-all duration-300 hover:scale-[1.02] active:scale-95 shadow-lg" disabled={submitting}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign Up
               </Button>
@@ -226,7 +255,7 @@ export default function LoginCard() {
             <span className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">OR</span>
         </div>
 
-        <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={submitting}>
+        <Button variant="outline" className="w-full transition-all duration-300 hover:bg-secondary/80 hover:scale-[1.02] active:scale-95" onClick={handleGoogleSignIn} disabled={submitting}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <GoogleIcon className="mr-2 h-4 w-4"/>}
             Sign In with Google
         </Button>

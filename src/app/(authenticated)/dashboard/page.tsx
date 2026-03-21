@@ -11,9 +11,9 @@ export default function DashboardPage() {
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       <h1 className="font-headline text-3xl font-bold tracking-tight">
-        Welcome to the NEU Library, {displayName}!
+        Welcome to NEU Library!
       </h1>
-      <p className="text-muted-foreground">Please log your visit below to help us improve our services.</p>
+      <p className="text-muted-foreground mt-2">Hello, {displayName}. Please log your visit below to help us improve our services.</p>
       <div className="mt-8 max-w-2xl">
         <VisitLogForm />
       </div>

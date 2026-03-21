@@ -24,8 +24,8 @@ interface AuthContextType {
   userData: AppUser | null;
   loading: boolean;
   isSubmitting: boolean;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<boolean>;
+  signUpWithEmail: (fullName: string, email: string, password: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const displayName = firebaseUser.displayName || '';
         const email = firebaseUser.email;
         // Assign admin role based on email
-        const role = email === 'jcesperanza@neu.edu.ph' ? 'admin' : 'user';
+        const role = (email === 'jcesperanza@neu.edu.ph' || email?.toLowerCase() === 'efraim.adenit@neu.edu.ph') ? 'admin' : 'user';
         
         appUserData = {
             uid: firebaseUser.uid,
@@ -130,17 +130,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [handleUserAuth, toast]);
 
-  const signInWithEmail = async (email: string, password: string): Promise<void> => {
+  const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
     setIsSubmitting(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await handleUserAuth(userCredential.user);
-      toast({
-          title: "Welcome Back!",
-          description: "You have been successfully signed in.",
-          variant: "default",
-          className: "bg-accent text-accent-foreground border-accent",
-      });
+      if (email === 'jcesperanza@neu.edu.ph' || email?.toLowerCase() === 'efraim.adenit@neu.edu.ph') {
+        toast({
+            title: "Welcome to NEU Library!",
+            description: "You have been successfully signed in as admin.",
+            variant: "default",
+            className: "bg-accent text-accent-foreground border-accent",
+        });
+      } else {
+        toast({
+            title: "Welcome Back!",
+            description: "You have been successfully signed in.",
+            variant: "default",
+            className: "bg-accent text-accent-foreground border-accent",
+        });
+      }
+      return true;
     } catch (error: any) {
       console.error("Login Failed:", error);
       let description = 'An unknown error occurred. Please try again.';
@@ -152,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Login Failed",
         description: description,
       });
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -164,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithRedirect(auth, provider);
   }
 
-  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<void> => {
+  const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<boolean> => {
     setIsSubmitting(true);
     try {
       if (!email.endsWith('@neu.edu.ph')) {
@@ -184,6 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           variant: 'default',
           className: 'bg-accent text-accent-foreground border-accent',
       });
+      return true;
     } catch (error: any) {
         console.error("Sign Up Failed:", error);
         let description = error.message; // Default to firebase message
@@ -197,6 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: "Sign Up Failed",
             description: description,
         });
+        return false;
     } finally {
       setIsSubmitting(false);
     }

@@ -1,13 +1,22 @@
 # NEU Library Visitor Log
 
-**Deployed App:** [Insert your Vercel/Firebase Hosting Link Here]
+A modern, dynamic Next.js application designed to digitally track and record library visits at New Era University.
 
-This is a Next.js application for logging and analyzing visitor data at the NEU Library, built with Firebase and featuring AI-powered insights.
+## 🔗 Links (Submission References)
+- **GitHub Repository**: [INSERT GITHUB LINK HERE]
+- **Live Deployed Application**: [INSERT FIREBASE APP HOSTING LINK HERE]
 
-## Features
-- **Google Login:** Secure access using @neu.edu.ph accounts.
-- **Dynamic Greeting:** Personalized welcome message for users.
-- **Visitor Logging:** Simple form for users to log their library visits.
-- **Admin Dashboard:** Role-based access to visitor statistics and data visualizations.
-- **Data Filtering:** Admins can filter visitor data by Reason, College, and Employment status.
-- **AI-Powered Insights:** Admins can generate summaries and identify trends from visitor data using AI.
+## 🛠 Features
+
+- **RBAC Authentication**: Robust Role-Based Access Control ensuring secure user authorization schemas. Supports Google Sign In and strict domain limitations (`@neu.edu.ph`).
+- **Student Dashboard**: Automatically logs regular users, capturing analytics and their reason for visitation securely. Displays customized greeting: "Welcome to NEU Library!".
+- **Admin Dashboard**: Provides statistical aggregations (today, weekly, monthly views), analytical bar charts filtering by college/reason, and instant AI-assisted data analysis via Google Genkit.
+
+### Author
+- Hope Arden (Efraim Adenit / JC Esperanza)
+
+### Technologies Used
+- Next.js (App Router)
+- React Hook Form + Zod validation
+- Firebase / Firestore Auth
+- Tailwind CSS & Shadcn UI Components
