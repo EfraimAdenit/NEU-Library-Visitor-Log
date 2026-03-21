@@ -44,16 +44,9 @@ export default function AuthenticatedLayout({ children }: { children: ReactNode 
   }, [userData, loading, router, roleTheme]);
 
 
+  // Only block rendering if we're doing initial auth check OR user is confirmed not logged in
   if (loading || !user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin') && (!userData || userData.role !== 'admin' || roleTheme === 'student')) {
-     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>

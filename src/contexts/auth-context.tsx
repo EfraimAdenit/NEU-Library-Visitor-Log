@@ -68,19 +68,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        try {
-          await handleUserAuth(firebaseUser);
-        } catch (error) {
-          console.error("Error handling auth state change:", error);
-          setUser(firebaseUser);
-        }
+        // OPTIMIZATION: Set user and stop loading spinner immediately — auth is resolved.
+        // Then fetch Firestore user data in the background without blocking the UI.
+        setUser(firebaseUser);
+        setLoading(false);
+        handleUserAuth(firebaseUser).catch((error) => {
+          console.error("Error fetching user data:", error);
+        });
       } else {
         setUser(null);
         setUserData(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
