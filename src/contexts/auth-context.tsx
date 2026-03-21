@@ -10,8 +10,7 @@ import {
   signOut as firebaseSignOut, 
   type User,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -48,10 +47,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userSnap.exists()) {
         appUserData = userSnap.data() as AppUser;
     } else {
-        // This logic runs for new users (both email and Google sign-up)
         const displayName = firebaseUser.displayName || '';
         const email = firebaseUser.email;
-        // Assign admin role based on email
         const role = (email === 'jcesperanza@neu.edu.ph' || email?.toLowerCase() === 'efraim.adenit@neu.edu.ph') ? 'admin' : 'user';
         
         appUserData = {
@@ -60,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: displayName,
             role,
         };
-        // Update user profile if display name was missing (e.g., email sign-up)
         if (!firebaseUser.displayName && displayName) {
           await updateProfile(firebaseUser, { displayName });
         }
@@ -72,82 +68,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Check for redirect result from Google sign-in first
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          const googleUser = result.user;
-          if (!googleUser.email?.endsWith('@neu.edu.ph')) {
-            firebaseSignOut(auth); // Sign out the user immediately
-            toast({
-              variant: 'destructive',
-              title: 'Login Failed',
-              description: 'Only @neu.edu.ph accounts are permitted.',
-            });
-          } else {
-            // The onAuthStateChanged listener below will handle creating the user
-            // and setting the state. We can just show a success toast here.
-            toast({
-              title: 'Welcome!',
-              description: 'You have been successfully signed in with Google.',
-              variant: 'default',
-              className: 'bg-accent text-accent-foreground border-accent',
-            });
-          }
-        }
-      })
-      .catch((error) => {
-        console.error("Google Sign-In Redirect Failed:", error);
-        toast({
-          variant: 'destructive',
-          title: 'Login Failed',
-          description: 'An error occurred during Google sign-in. Please try again.',
-        });
-      });
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      try {
-        if (firebaseUser) {
+      if (firebaseUser) {
+        try {
           await handleUserAuth(firebaseUser);
-        } else {
-          setUser(null);
-          setUserData(null);
+        } catch (error) {
+          console.error("Error handling auth state change:", error);
+          setUser(firebaseUser);
         }
-      } catch (error) {
-        console.error("Authentication error:", error);
-        toast({
-          variant: "destructive",
-          title: "Authentication Error",
-          description: "There was a problem verifying your session. Please try again.",
-        });
+      } else {
         setUser(null);
         setUserData(null);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [handleUserAuth, toast]);
+  }, [handleUserAuth]);
 
   const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
     setIsSubmitting(true);
     try {
+      if (!email.endsWith('@neu.edu.ph')) {
+        throw { code: 'auth/invalid-email', message: 'Only @neu.edu.ph emails are allowed.' };
+      }
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await handleUserAuth(userCredential.user);
       if (email === 'jcesperanza@neu.edu.ph' || email?.toLowerCase() === 'efraim.adenit@neu.edu.ph') {
         toast({
             title: "Welcome to NEU Library!",
             description: "You have been successfully signed in as admin.",
-            variant: "default",
-            className: "bg-accent text-accent-foreground border-accent",
         });
       } else {
         toast({
-            title: "Welcome Back!",
+            title: "Welcome back!",
             description: "You have been successfully signed in.",
-            variant: "default",
-            className: "bg-accent text-accent-foreground border-accent",
         });
       }
       return true;
@@ -156,6 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let description = 'An unknown error occurred. Please try again.';
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
         description = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (error.code === 'auth/invalid-email') {
+        description = error.message;
       }
       toast({
         variant: "destructive",
@@ -171,22 +128,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async (): Promise<void> => {
     setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
-    // Errors will be caught by getRedirectResult on the landing page.
-    await signInWithRedirect(auth, provider);
-  }
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const googleUser = result.user;
+      
+      if (!googleUser.email?.endsWith('@neu.edu.ph')) {
+        await firebaseSignOut(auth);
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: "Only @neu.edu.ph Google accounts are permitted.",
+        });
+        return;
+      }
+      await handleUserAuth(googleUser);
+      toast({
+        title: "Welcome!",
+        description: "You have been successfully signed in with Google.",
+        variant: 'default',
+        className: 'bg-accent text-accent-foreground border-accent',
+      });
+    } catch (error: any) {
+      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+        console.error("Google Sign-In Failed:", error);
+        toast({
+          variant: "destructive",
+          title: "Google Sign-In Failed",
+          description: error.message || "An error occurred. Please try again.",
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const signUpWithEmail = async (fullName: string, email: string, password: string): Promise<boolean> => {
     setIsSubmitting(true);
     try {
       if (!email.endsWith('@neu.edu.ph')) {
-        // This custom error will be caught by the catch block
         throw { code: 'auth/invalid-email', message: 'Only @neu.edu.ph emails are allowed.' };
       }
         
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Manually update profile before calling handleUserAuth
       await updateProfile(userCredential.user, { displayName: fullName });
-      // handleUserAuth will now read the updated profile
       await handleUserAuth(userCredential.user);
 
       toast({
@@ -198,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error: any) {
         console.error("Sign Up Failed:", error);
-        let description = error.message; // Default to firebase message
+        let description = error.message;
         if (error.code === 'auth/email-already-in-use') {
             description = 'An account with this email address already exists. Please sign in instead.';
         } else if (error.code === 'auth/weak-password') {
@@ -229,45 +213,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
          console.error("Password Reset Failed:", error);
          toast({
             variant: "destructive",
-            title: "Failed to Send Reset Email",
-            description: "Could not send reset email. Please check the address and try again.",
+            title: "Password Reset Failed",
+            description: error.message || "Could not send reset email. Please try again.",
         });
-    } finally {
-        setIsSubmitting(false);
-    }
-  }
-
-  const signOut = async () => {
-    setIsSubmitting(true);
-    try {
-      await firebaseSignOut(auth);
-       toast({
-        title: "Signed Out",
-        description: "You have been successfully signed out.",
-      });
-    } catch (error: any) {
-       console.error("Sign Out Failed:", error);
-       toast({
-        variant: "destructive",
-        title: "Sign out failed",
-        description: "An error occurred during sign-out. Please try again.",
-      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const value = {
-    user,
-    userData,
-    loading,
-    isSubmitting,
-    signInWithEmail,
-    signUpWithEmail,
-    signInWithGoogle,
-    sendPasswordReset,
-    signOut,
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+      toast({ title: "Signed Out", description: "You have been successfully signed out." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Sign Out Failed", description: error.message });
+    }
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, userData, loading, isSubmitting, signInWithEmail, signUpWithEmail, signInWithGoogle, sendPasswordReset, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
