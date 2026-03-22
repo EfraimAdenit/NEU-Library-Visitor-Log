@@ -39,31 +39,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleUserAuth = useCallback(async (firebaseUser: User): Promise<AppUser> => {
-    const userRef = doc(db, 'users', firebaseUser.uid);
-    const userSnap = await getDoc(userRef);
-    let appUserData: AppUser;
+  const ADMIN_EMAILS = ['jcesperanza@neu.edu.ph', 'efraim.adenit@neu.edu.ph'];
 
-    if (userSnap.exists()) {
-        appUserData = userSnap.data() as AppUser;
-    } else {
-        const displayName = firebaseUser.displayName || '';
-        const email = firebaseUser.email;
-        const role = (email === 'jcesperanza@neu.edu.ph' || email?.toLowerCase() === 'efraim.adenit@neu.edu.ph') ? 'admin' : 'user';
-        
-        appUserData = {
-            uid: firebaseUser.uid,
-            email: email,
-            name: displayName,
-            role,
-        };
-        if (!firebaseUser.displayName && displayName) {
-          await updateProfile(firebaseUser, { displayName });
-        }
-        await setDoc(userRef, appUserData);
-    }
+  const handleUserAuth = useCallback(async (firebaseUser: User): Promise<AppUser> => {
+    const email = firebaseUser.email ?? '';
+    const emailLower = email.toLowerCase();
+    
+    // Derive role instantly from email — no database call needed
+    const role = ADMIN_EMAILS.some(e => e.toLowerCase() === emailLower) ? 'admin' : 'user';
+    
+    const appUserData: AppUser = {
+      uid: firebaseUser.uid,
+      email: email,
+      name: firebaseUser.displayName || '',
+      role,
+    };
+
+    // Set state immediately so the UI transitions without waiting for Firestore
     setUser(firebaseUser);
     setUserData(appUserData);
+
+    // Write to Firestore in the background only — does not block UI
+    const userRef = doc(db, 'users', firebaseUser.uid);
+    getDoc(userRef).then((snap) => {
+      if (!snap.exists()) {
+        setDoc(userRef, appUserData).catch(console.error);
+      }
+    }).catch(console.error);
+
     return appUserData;
   }, []);
 
