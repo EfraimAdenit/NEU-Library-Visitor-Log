@@ -12,21 +12,26 @@ const firebaseConfig: FirebaseOptions = {
   measurementId: "G-8754EGD05Y",
 };
 
-// Initialize Firebase — only initialise once. Use a flag variable to track if this is first run.
+// Firestore settings that fix the "client is offline" error in Next.js / Vercel environments.
+// - experimentalForceLongPolling: avoids WebSocket/gRPC issues on serverless/proxy environments
+// - useFetchStreams: false: disables the fetch-based streaming which breaks on some cloud networks
+const FIRESTORE_SETTINGS = {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+};
+
 let app: FirebaseApp;
 let db: Firestore;
 
 const existingApps = getApps();
 
 if (existingApps.length === 0) {
-  // First time: initialize the app AND Firestore with long-polling enabled
   app = initializeApp(firebaseConfig);
-  db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-  });
+  db = initializeFirestore(app, FIRESTORE_SETTINGS);
 } else {
-  // App already running (Next.js hot reload): safely get existing instances
   app = getApp();
+  // On subsequent module evaluations (Next.js hot reload), we must re-apply settings.
+  // getFirestore returns the existing instance which already has the settings applied.
   db = getFirestore(app);
 }
 
